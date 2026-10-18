@@ -1,0 +1,81 @@
+# beyond-vibe configuration file
+# This file is loaded automatically from next to the executable.
+
+[network]
+beyond_ip = "127.0.0.1"
+beyond_port = 8000
+
+[controller]
+midi_device_name = ""       # Substring to match device name, e.g. "Launchpad", or empty for first available
+key_rhythm_main = 36        # Key 1: Main Rhythm (e.g. C2 / 36)
+key_rhythm_sub = 37         # Key 2: Sub Rhythm (e.g. C#2 / 37)
+key_flash = 38              # Key 3: Flash / Solo FX
+key_hold_latch = 39         # Key 4: Hold / Latch
+key_vibe_next_lock = 40     # Key 5: Cycle / Lock Vibe Group
+key_blackout = 41           # Key 6: Blackout
+cc_slider_morph = 1         # Slider 1: Modulation CC (e.g. CC 1 Mod Wheel)
+
+[timing]
+default_bpm = 128.0
+group_duration_secs = 45
+pause_beats_to_switch = 2.0
+quick_tap_threshold_ms = 150
+default_decay_beats = 1.0
+
+[[groups]]
+name = "Atmosphere Waves"
+selection_mode = "ShuffleBag"
+slider_pangoscript_target = "SizeY"
+
+[[groups.rhythm_cues]]
+page = 1
+row = 1
+col = 1
+
+[[groups.rhythm_cues]]
+page = 1
+row = 1
+col = 2
+
+[[groups.rhythm_cues]]
+page = 1
+row = 1
+col = 3
+
+[[groups.rhythm_cues]]
+page = 1
+row = 1
+col = 4
+
+[groups.step_modifier]
+CycleColorPalette = [1, 2, 3, 4]
+
+[groups.flash_behavior]
+TriggerSoloCue = { page = 1, row = 2, col = 1 }
+
+[[groups]]
+name = "Peak Hour Beams"
+selection_mode = "ShuffleBag"
+slider_pangoscript_target = "LaserOutput"
+
+[[groups.rhythm_cues]]
+page = 1
+row = 3
+col = 1
+
+[[groups.rhythm_cues]]
+page = 1
+row = 3
+col = 2
+
+[[groups.rhythm_cues]]
+page = 1
+row = 3
+col = 3
+
+[groups.step_modifier]
+None = {}
+
+[groups.flash_behavior]
+OverlayPangoScript = { on_press = "Color 255,255,255", on_release = "ColorReset" }
+

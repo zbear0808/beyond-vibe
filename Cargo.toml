@@ -1,0 +1,28 @@
+[package]
+name = "beyond-vibe"
+version = "0.1.0"
+edition = "2021"
+authors = ["Laser Ops"]
+description = "Cross-platform portable MIDI to Pangolin BEYOND OSC controller middleware"
+
+[dependencies]
+# Cross-platform native MIDI I/O (WinMM, CoreMIDI, ALSA)
+midir = "0.10"
+
+# Open Sound Control (OSC) packet encoding for Pangolin BEYOND
+rosc = "0.10"
+
+# Lock-free multi-producer single-consumer channels between MIDI callback and Engine
+crossbeam-channel = "0.5"
+
+# Human-friendly config parsing (TOML is much easier for laser ops to edit than JSON)
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+
+# Randomization for the non-repeating "Shuffle Bag" cue selector
+rand = "0.8"
+
+# Lightweight cross-platform Terminal UI
+ratatui = "0.28"
+crossterm = "0.28"
+
