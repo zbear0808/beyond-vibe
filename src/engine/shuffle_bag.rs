@@ -30,8 +30,8 @@ impl ShuffleBag {
         let mut new_bag = self.items.clone();
         new_bag.shuffle(&mut rng);
 
-        // If the first element of the new shuffle matches the last picked element, swap it
-        if new_bag.len() > 1 && Some(new_bag[0]) == self.last_picked {
+        // Items are picked from the end, so make sure the next pick isn't a repeat of the last one
+        if new_bag.len() > 1 && new_bag.last().copied() == self.last_picked {
             let last_idx = new_bag.len() - 1;
             new_bag.swap(0, last_idx);
         }
@@ -54,12 +54,41 @@ impl ShuffleBag {
         }
         picked
     }
-
-    pub fn reset_with_count(&mut self, count: usize) {
-        self.items = (0..count).collect();
-        self.bag.clear();
-        self.last_picked = None;
-        self.refill_and_shuffle();
-    }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn never_repeats_back_to_back() {
+        for n in 2..=6 {
+            let mut bag = ShuffleBag::new(n);
+            let mut prev = bag.pick_next();
+            for _ in 0..10_000 {
+                let next = bag.pick_next();
+                assert_ne!(prev, next, "repeat with n={}", n);
+                prev = next;
+            }
+        }
+    }
+
+    #[test]
+    fn every_item_once_per_cycle() {
+        let n = 5;
+        let mut bag = ShuffleBag::new(n);
+        for _ in 0..100 {
+            let mut seen: Vec<usize> = (0..n).map(|_| bag.pick_next().unwrap()).collect();
+            seen.sort();
+            assert_eq!(seen, (0..n).collect::<Vec<_>>());
+        }
+    }
+
+    #[test]
+    fn edge_sizes() {
+        assert_eq!(ShuffleBag::new(0).pick_next(), None);
+        let mut one = ShuffleBag::new(1);
+        assert_eq!(one.pick_next(), Some(0));
+        assert_eq!(one.pick_next(), Some(0));
+    }
+}

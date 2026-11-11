@@ -9,44 +9,132 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
   build:
+    needs: check
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_name: beyond-vibe-windows.exe
-            binary_name: beyond-vibe.exe
+            targets: x86_64-pc-windows-msvc
+            suffix: windows-x86_64
           - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact_name: beyond-vibe-macos-arm64
-            binary_name: beyond-vibe
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: beyond-vibe-linux-x86_64
-            binary_name: beyond-vibe
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+            suffix: macos-universal
+          - os: ubuntu-22.04
+            targets: x86_64-unknown-linux-gnu
+            suffix: linux-x86_64
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ALSA headers on Linux
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install ALSA headers
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
 
-      - name: Install Rust Toolchain
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.targets }}
 
-      - name: Build Release Binary
-        run: cargo build --release --target ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Upload Single Executable
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cargo build --release --locked --target x86_64-pc-windows-msvc
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: cargo build --release --locked --target x86_64-unknown-linux-gnu
+
+      - name: Build universal binary (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create \
+            target/aarch64-apple-darwin/release/beyond-vibe \
+            target/x86_64-apple-darwin/release/beyond-vibe \
+            -output target/universal-apple-darwin/release/beyond-vibe
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            bin=target/universal-apple-darwin/release/beyond-vibe
+          else
+            bin=target/x86_64-unknown-linux-gnu/release/beyond-vibe
+          fi
+          mkdir -p package
+          cp "$bin" vibes.toml package/
+          chmod +x package/beyond-vibe
+          tar -czf beyond-vibe-${{ matrix.suffix }}.tar.gz -C package .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item target/x86_64-pc-windows-msvc/release/beyond-vibe.exe, vibes.toml package/
+          Compress-Archive -Path package/* -DestinationPath beyond-vibe-${{ matrix.suffix }}.zip
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+          name: beyond-vibe-${{ matrix.suffix }}
+          path: beyond-vibe-${{ matrix.suffix }}.*
+          if-no-files-found: error
 
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

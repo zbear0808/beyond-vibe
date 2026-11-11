@@ -2,6 +2,7 @@
 name = "beyond-vibe"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.80"
 authors = ["Laser Ops"]
 description = "Cross-platform portable MIDI to Pangolin BEYOND OSC controller middleware"
 
@@ -25,4 +26,20 @@ rand = "0.8"
 # Lightweight cross-platform Terminal UI
 ratatui = "0.28"
 crossterm = "0.28"
+
+# Clean shutdown (stop cues) on Ctrl+C / SIGTERM / console window close
+ctrlc = { version = "3.5", features = ["termination"] }
+
+# Comment-preserving edits of vibes.toml for the MIDI learn wizard
+toml_edit = "0.22"
+
+[target.'cfg(windows)'.dependencies]
+# timeBeginPeriod(1) for accurate 1 ms engine ticks on Windows
+windows-sys = { version = "0.59", features = ["Win32_Media"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
 

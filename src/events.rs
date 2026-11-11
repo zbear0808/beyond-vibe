@@ -7,16 +7,34 @@ pub enum MidiInputMessage {
     ControlChange { channel: u8, controller: u8, value: u8 },
 }
 
+impl MidiInputMessage {
+    /// 0-based MIDI channel (0..=15)
+    pub fn channel(&self) -> u8 {
+        match self {
+            MidiInputMessage::NoteOn { channel, .. }
+            | MidiInputMessage::NoteOff { channel, .. }
+            | MidiInputMessage::ControlChange { channel, .. } => *channel,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MidiStatus {
+    Searching,
+    Connected(String),
+    Disconnected(String),
+    Error(String),
+}
+
 #[derive(Debug, Clone)]
 pub enum EngineEvent {
     MidiInput {
         timestamp: Instant,
         message: MidiInputMessage,
     },
-    Tick(Instant),
+    MidiStatus(MidiStatus),
     ForceNextVibe,
     ToggleVibeLock,
     BlackoutToggle,
     Quit,
 }
-

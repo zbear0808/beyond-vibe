@@ -1,31 +1,46 @@
 # beyond-vibe configuration file
-# This file is loaded automatically from next to the executable.
+# Looked up next to the executable first, then in the current folder.
+# You can also point at a specific file with:  beyond-vibe --config path\to\vibes.toml
+#
+# PangoScript fields (step modifiers, flash scripts, slider target) are sent to BEYOND's
+# OSC-to-PangoScript gateway as  /beyond/general/<Command>  with typed arguments:
+#   - whole numbers (1, 255, 0xFF) are sent as integers
+#   - numbers with a decimal point (1.0, 0.5) are sent as floats
+#   - "quoted text" or bare words are sent as strings
+# Match the types in the PangoScript reference (e.g. RGBA takes floats, so write 255.0).
+# Separate several commands with ';'. A field starting with '/' is sent as a raw OSC address.
 
 [network]
-beyond_ip = "127.0.0.1"
-beyond_port = 8000
+beyond_ip = "127.0.0.1"     # IP of the PC running BEYOND
+beyond_port = 8000          # BEYOND OSC server port (Settings -> OSC)
 
 [controller]
-midi_device_name = ""       # Substring to match device name, e.g. "Launchpad", or empty for first available
-key_rhythm_main = 36        # Key 1: Main Rhythm (e.g. C2 / 36)
+midi_device_name = ""       # Substring of the MIDI device name, e.g. "Launchpad". Empty = first non-virtual device
+# midi_channel = 1          # Only listen on this MIDI channel (1-16). Leave out to listen on all channels
+key_rhythm_main = 36        # Key 1: Main Rhythm + tap tempo (e.g. C2 / 36)
 key_rhythm_sub = 37         # Key 2: Sub Rhythm (e.g. C#2 / 37)
 key_flash = 38              # Key 3: Flash / Solo FX
 key_hold_latch = 39         # Key 4: Hold / Latch
-key_vibe_next_lock = 40     # Key 5: Cycle / Lock Vibe Group
-key_blackout = 41           # Key 6: Blackout
+key_vibe_next_lock = 40     # Key 5: Tap = next vibe group, hold (0.6 s) = lock/unlock current group
+key_blackout = 41           # Key 6: Blackout on/off
 cc_slider_morph = 1         # Slider 1: Modulation CC (e.g. CC 1 Mod Wheel)
 
 [timing]
-default_bpm = 128.0
-group_duration_secs = 45
-pause_beats_to_switch = 2.0
-quick_tap_threshold_ms = 150
-default_decay_beats = 1.0
+default_bpm = 128.0         # Used until you tap a tempo on Key 1 (40-300)
+group_duration_secs = 45    # How long a vibe group plays before it is ARMED to switch
+pause_beats_to_switch = 2.0 # Beats of silence that trigger the armed switch
+quick_tap_threshold_ms = 150 # Shorter presses decay automatically; longer presses are held (gate)
+default_decay_beats = 1.0   # How many beats a quick tap keeps the cue on
+
+[grid]
+columns = 10                # Columns in your BEYOND cue grid; row/col below are converted to BEYOND's cue number
 
 [[groups]]
 name = "Atmosphere Waves"
-selection_mode = "ShuffleBag"
-slider_pangoscript_target = "SizeY"
+selection_mode = "ShuffleBag"   # "ShuffleBag" (random, never the same twice in a row) or "RoundRobin"
+slider_pangoscript_target = "/beyond/master/livecontrol/sizey"
+slider_min = 0.0
+slider_max = 100.0
 
 [[groups.rhythm_cues]]
 page = 1
@@ -48,7 +63,8 @@ row = 1
 col = 4
 
 [groups.step_modifier]
-CycleColorPalette = [1, 2, 3, 4]
+# Live Control color slider positions (0-255) stepped through on each tap
+CycleColorPalette = [40, 90, 140, 200]
 
 [groups.flash_behavior]
 TriggerSoloCue = { page = 1, row = 2, col = 1 }
@@ -56,7 +72,9 @@ TriggerSoloCue = { page = 1, row = 2, col = 1 }
 [[groups]]
 name = "Peak Hour Beams"
 selection_mode = "ShuffleBag"
-slider_pangoscript_target = "LaserOutput"
+slider_pangoscript_target = "/beyond/master/livecontrol/brightness"
+slider_min = 0.0
+slider_max = 100.0
 
 [[groups.rhythm_cues]]
 page = 1
@@ -77,5 +95,4 @@ col = 3
 None = {}
 
 [groups.flash_behavior]
-OverlayPangoScript = { on_press = "Color 255,255,255", on_release = "ColorReset" }
-
+OverlayPangoScript = { on_press = "RGBA 255.0, 255.0, 255.0, 255.0", on_release = "ColorOn 0.0" }
